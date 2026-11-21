@@ -4,6 +4,7 @@ import MapView from './MapView';
 import RainChart from './RainChart';
 import { SourceCard } from './Evidence';
 import { api, query } from './api';
+import { findCellAt } from './cellLookup';
 import { date, nepalDay, number, RISK_COLORS, RISK_LABELS, RISK_LEVELS, time } from './format';
 import type { Cell, EventRecord, Forecast, LocationResult, Manifest, Place, Source, Status } from './types';
 
@@ -218,7 +219,9 @@ export default function App() {
     locationRequest.current?.abort();
     const abort = new AbortController(); locationRequest.current = abort;
     selectedPosition.current = { lat, lon };
-    const loadedCell = cellId && forecast?.features.find(feature => feature.properties.cell_id === cellId);
+    const loadedCell = cellId
+      ? forecast?.features.find(feature => feature.properties.cell_id === cellId)
+      : findCellAt(forecast, lat, lon);
     if (loadedCell) {
       setCell(loadedCell);
       setLocation({ cell: loadedCell, history: [], rainfall: loadedCell.properties.rainfall_series || [] });
