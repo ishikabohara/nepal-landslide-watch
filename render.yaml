@@ -1,10 +1,10 @@
-# Paid service and persistent disk; review the account's price before creating.
-# Keep the worker off until the disk has been seeded with the runtime archive.
+# Free read-only web service. GitHub Actions publishes the runtime archive.
 services:
   - type: web
     name: nepal-landslide-watch
     runtime: docker
-    plan: 1c-2g
+    plan: free
+    dockerCommand: python -m scripts.start_free_service
     healthCheckPath: /healthz
     envVars:
       - key: NEPAL_DATA_DIR
@@ -13,7 +13,3 @@ services:
         value: "0"
       - key: PYTHONUNBUFFERED
         value: "1"
-    disk:
-      name: nepal-research-data
-      mountPath: /app/data
-      sizeGB: 5

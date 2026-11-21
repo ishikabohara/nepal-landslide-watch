@@ -1,0 +1,44 @@
+name: Update public data snapshot
+
+on:
+  schedule:
+    # 23:18 Nepal time. The runner refreshes inputs before the 23:50 issue window.
+    - cron: '33 17 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: public-runtime
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install locked dependencies
+        run: python -m pip install -r requirements-lock.txt
+      - name: Restore last published snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts/runtime
+          gh release download runtime --pattern 'nepal-runtime.tar.gz*' --dir artifacts/runtime
+          cd artifacts/runtime
+          sha256sum --check nepal-runtime.tar.gz.sha256
+          tar -xzf nepal-runtime.tar.gz -C ../..
+      - name: Refresh rainfall and issue if complete
+        run: python -m scripts.publish_scheduled_snapshot
+      - name: Package redacted public runtime
+        run: python scripts/package_runtime.py
+      - name: Replace release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload runtime artifacts/runtime/nepal-runtime.tar.gz artifacts/runtime/nepal-runtime.tar.gz.sha256 --clobber

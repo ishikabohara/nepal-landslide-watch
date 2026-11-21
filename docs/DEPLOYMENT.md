@@ -1,6 +1,6 @@
 # Deploy and operate Nepal Landslide Watch
 
-The application currently runs locally with real data and a fitted model. No public cloud URL has been created. Publishing requires the owner's hosting account and, for continuous operation on Render, a paid service with persistent storage. Never put passwords, tokens or raw report contact information in this repository. The public Git repository contains the website and service source, while the large research workspaces and runtime data stay local.
+The application runs locally with real data and a fitted model. The free public deployment uses a Render web service and a GitHub Release asset for the redacted runtime snapshot. Never put passwords, tokens or raw report contact information in this repository. The Git repository contains source code; the public release contains only the packaged runtime data.
 
 ## Local server
 
@@ -47,19 +47,18 @@ On macOS the checksum equivalent is `shasum -a 256 -c nepal-runtime.tar.gz.sha25
 
 The archive can also seed `data/` on a new local checkout by extracting it at that checkout's root. It does not include historical raw satellite tiles or original unredacted reports needed for an exact acquisition audit; retain those in the research backup.
 
-## Render configuration
+## Free Render and GitHub deployment
 
-The repository includes `render.yaml` for a single Docker web service with a persistent disk at `/app/data`. It selects the 1 CPU / 2 GB plan and a 5 GB disk. Review the current plan and displayed cost in your account before creation; there is no assumed budget approval. The worker starts disabled so the first deployment cannot write to an unseeded data directory.
+`render.yaml` requests one **Free** Docker web service, without a disk or billing plan. The web service runs the API and downloads the latest checksummed runtime archive from the repository's public `runtime` GitHub Release at startup. While awake, it checks for a new archive every 15 minutes. It does not run the weather worker.
 
-1. Put the reviewed source repository in the Git provider/account you control. Keep `.env`, raw data and generated runtime archives excluded from git.
-2. In Render, create a Blueprint from that repository and review its service, plan and disk. Alternatively create a Docker web service with the same settings manually.
-3. Confirm `NEPAL_DATA_DIR=/app/data` and `NEPAL_WORKER_ENABLED=1`, disk mount `/app/data`, and health check `/healthz`.
-4. Seed the mounted disk with the trusted runtime archive through the host's authenticated shell/transfer facilities. The initial worker setting is `NEPAL_WORKER_ENABLED=0`; verify the data before changing it to `1` and restarting the service.
-5. Open the assigned HTTPS URL and perform the acceptance checks below. Confirm that the disk preserves publications after a restart.
+The GitHub Actions workflow `.github/workflows/publish-runtime.yml` runs daily at 23:18 Nepal time, restores the prior archive, refreshes recent rainfall, and attempts prospective issuance in the project's 23:50–00:00 window. It publishes a new redacted archive only after the update job completes. The release asset is public; never add raw reports, contacts, secrets, or private research data to the package allowlist. A failed source refresh or missed issuance keeps the last published map and must not be described as a current forecast.
 
-Render's filesystem outside the disk is ephemeral; free web services cannot attach persistent disks. Disk-backed services do not support horizontal scaling in this architecture. Consult the provider's current [persistent disk documentation](https://render.com/docs/disks), [Docker deployment instructions](https://render.com/docs/docker), [Blueprint specification](https://render.com/docs/blueprint-spec) and [SSH documentation](https://render.com/docs/ssh). The Blueprint is a deployment package, not evidence that a public deployment has happened.
+1. Create the initial `runtime` GitHub Release with the locally checked `nepal-runtime.tar.gz` and `.sha256` assets. Preserve the tag; scheduled jobs replace only its assets.
+2. Connect the public GitHub repository to Render and create a Blueprint from `render.yaml`. Verify **Free** is selected and **no disk or payment method** is requested.
+3. Open the assigned HTTPS URL; check `/api/status`, the grid, search and location details. Run the GitHub workflow manually if the nightly schedule has not run yet.
+4. Monitor GitHub Actions and the `/api/status` manifest. GitHub schedules may be delayed or skipped; the worker never backdates a missed issuance. Public repositories may have scheduled workflows disabled after prolonged inactivity.
 
-For a small demonstration, one continuously running instance is sufficient. If usage grows, move forecast artifacts to durable object storage, coordinate one writer and cache the read-only API before adding instances. Do not deploy several independent scheduler replicas onto separate disks.
+Render Free spins down after 15 minutes without traffic and can take about a minute to wake. Its filesystem is ephemeral, so each cold start re-downloads the public archive. The initial September 2026 simulation remains visibly historical until a fresh prospective run succeeds. This is a student research demonstration, not a guaranteed continuous or emergency service. See the provider's [free service limitations](https://render.com/docs/free) and [Blueprint reference](https://render.com/docs/blueprint-spec).
 
 ## Settings
 
@@ -81,8 +80,8 @@ No Earthdata account, commercial map token or proprietary weather credential is 
 - A historical date displays its actual target interval. Its manifest retains `mode=historical`; it must not be presented as a forecast genuinely issued then.
 - Source retrieval time and observation time are distinct. No soil-moisture values appear without a source.
 - The nightly operational manifest has `mode=operational`, a real `generated_at`/`issued_at` before `valid_from`, the required rainfall cutoff and hashes.
-- Restart the service and confirm that old run files and `published/current.json` remain on the disk.
-- Monitor `/api/status.worker_health`: `heartbeat_stale`, `errors`, `rainfall`, `forecast_input_readiness`, `last_missed_forecast_target` and `next_forecast_attempt_at`. HTTP liveness alone is not forecast freshness.
+- Restart the service and confirm that it reloads the latest published archive from GitHub.
+- Monitor the GitHub Actions run and `/api/status.latest_run`. The web server does not run a local worker, so its heartbeat does not indicate publication freshness.
 - Keep backups of `data/model/`, `data/published/`, provenance and the original research snapshots. Never delete old runs merely to make a stale run appear current.
 
 A failed source refresh retains the last publication and the failure in health metadata. Missing complete rainfall prevents issuance; a missed midnight window cannot be repaired by pretending a retrospective run was issued earlier. The scheduler is not an emergency notification system and sends no public alerts.
