@@ -104,6 +104,7 @@ def location(
     lon: Longitude,
     run_id: RunSelector = None,
     history_limit: Annotated[int, Query(ge=1, le=90)] = 30,
+    include_history: bool = True,
 ) -> dict[str, Any]:
     bounded_coordinates(lat, lon)
     snapshot = store(request)
@@ -114,7 +115,7 @@ def location(
     cell_id = str(properties.get("cell_id", cell.get("id", "")))
     return {
         "cell": cell,
-        "history": snapshot.history(cell_id, history_limit),
+        "history": snapshot.history(cell_id, history_limit) if include_history else [],
         "rainfall": properties.get("rainfall_series") or [],
     }
 

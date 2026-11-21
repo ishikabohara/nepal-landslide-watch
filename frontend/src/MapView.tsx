@@ -16,7 +16,7 @@ type Props = {
   showGrid: boolean;
   showHazard: boolean;
   focus: { lat: number; lon: number; nonce: number } | null;
-  onPick: (lat: number, lon: number) => void;
+  onPick: (lat: number, lon: number, cellId?: string) => void;
   onToggleGrid: () => void;
   onToggleHazard: () => void;
   /** Ready after this forecast's own source has been drawn, independent of basemap tiles. */
@@ -102,7 +102,11 @@ export default function MapView({ forecast, selected, events, showEvents, showGr
     // map.load waits for every source, including remote raster/terrain tiles.
     // style.load means our inline style's sources and layers can already be used.
     instance.on('style.load', () => setStyleReady(true));
-    instance.on('click', event => onPickRef.current(event.lngLat.lat, event.lngLat.lng));
+    instance.on('click', event => {
+      const rendered = instance.queryRenderedFeatures(event.point, { layers: ['hazard'] });
+      const cellId = rendered[0]?.properties?.cell_id;
+      onPickRef.current(event.lngLat.lat, event.lngLat.lng, typeof cellId === 'string' ? cellId : undefined);
+    });
     instance.on('mouseenter', 'hazard', () => { instance.getCanvas().style.cursor = 'crosshair'; });
     instance.on('mouseleave', 'hazard', () => { instance.getCanvas().style.cursor = ''; });
     instance.on('error', (event) => {

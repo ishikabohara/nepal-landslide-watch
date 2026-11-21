@@ -117,6 +117,9 @@ def test_location_matches_containing_country_geometry_and_history(client):
     assert result["cell"]["properties"]["rain_24h_mm"] is None
     assert [item["run_id"] for item in result["history"]] == ["latest", "earlier"]
     assert result["rainfall"][0]["rain_mm"] == 12.5
+    without_history = client.get("/api/location?lat=27.2&lon=85.2&include_history=false").json()
+    assert without_history["cell"]["properties"]["cell_id"] == "fixture-cell"
+    assert without_history["history"] == []
     # Both distant points and the unclipped part of a border cell stay unavailable.
     for lat, lon in ((0, 0), (27.8, 85.8)):
         assert client.get("/api/location", params={"lat": lat, "lon": lon}).json() == {"cell": None, "history": [], "rainfall": []}

@@ -86,7 +86,7 @@ function CellPanel({ cell, location, manifest, loading, onClose }: { cell: Cell;
   </aside>;
 }
 
-function OverviewPanel({ manifest, forecast, onPick }: { manifest: Manifest | null; forecast: Forecast | null; onPick: (lat: number, lon: number) => void }) {
+function OverviewPanel({ manifest, forecast, onPick }: { manifest: Manifest | null; forecast: Forecast | null; onPick: (lat: number, lon: number, cellId?: string) => void }) {
   const cells = forecast?.features || [];
   const featured = [...cells].filter(cell => cell.properties.score != null).sort((a, b) => b.properties.score! - a.properties.score!).slice(0, 3);
   const total = manifest?.cell_count || cells.length;
@@ -95,7 +95,7 @@ function OverviewPanel({ manifest, forecast, onPick }: { manifest: Manifest | nu
     <div className="overview-intro"><p>Select a cell to view rainfall and model estimates.</p></div>
     <div className="coverage-card"><div><span className="eyebrow">Modeled coverage</span><strong>{total ? number(total) : '—'} <span>grid cells</span></strong></div><Layers3 size={27}/><small>{manifest ? `${number(manifest.grid_resolution_degrees, 2)}° grid resolution` : 'Waiting for a published run'}</small></div>
     {manifest && <div className="detail-section"><div className="section-heading"><h3>National distribution</h3><span className="subtle-label">Cells</span></div><div className="distribution-bar">{RISK_LEVELS.map(level => <span title={`${RISK_LABELS[level]}: ${manifest.summary?.[level] || 0}`} key={level} style={{ background: RISK_COLORS[level], width: `${total ? (manifest.summary?.[level] || 0) / total * 100 : 0}%` }}/>)}</div><div className="distribution-list">{RISK_LEVELS.map(level => <div key={level}><span><i style={{ background: RISK_COLORS[level] }}/>{RISK_LABELS[level]}</span><strong>{number(manifest.summary?.[level] || 0)}</strong></div>)}</div></div>}
-    {featured.length > 0 && <div className="detail-section"><div className="section-heading"><h3>Higher-score cells</h3><ArrowUpRight size={15}/></div><div className="featured-cells">{featured.map(cell => <button key={cell.properties.cell_id} onClick={() => onPick(cell.properties.lat, cell.properties.lon)}><MapPin size={16}/><span><strong>{cell.properties.place_name || `Cell ${cell.properties.cell_id}`}</strong><small>{number(cell.properties.lat, 2)}° N, {number(cell.properties.lon, 2)}° E</small></span><span className="cell-dot" style={{ background: RISK_COLORS[cell.properties.risk_level] }}/><ChevronRight size={14}/></button>)}</div></div>}
+    {featured.length > 0 && <div className="detail-section"><div className="section-heading"><h3>Higher-score cells</h3><ArrowUpRight size={15}/></div><div className="featured-cells">{featured.map(cell => <button key={cell.properties.cell_id} onClick={() => onPick(cell.properties.lat, cell.properties.lon, cell.properties.cell_id)}><MapPin size={16}/><span><strong>{cell.properties.place_name || `Cell ${cell.properties.cell_id}`}</strong><small>{number(cell.properties.lat, 2)}° N, {number(cell.properties.lon, 2)}° E</small></span><span className="cell-dot" style={{ background: RISK_COLORS[cell.properties.risk_level] }}/><ChevronRight size={14}/></button>)}</div></div>}
   </aside>;
 }
 
@@ -214,13 +214,22 @@ export default function App() {
   // Colors, dates, reports and click inspection refer to the same loaded run,
   // including while a different archive date is still being downloaded.
   const displayedRunId = forecast?.manifest?.run_id || runId;
-  const pickLocation = useCallback(async (lat: number, lon: number) => {
+  const pickLocation = useCallback(async (lat: number, lon: number, cellId?: string) => {
     locationRequest.current?.abort();
     const abort = new AbortController(); locationRequest.current = abort;
     selectedPosition.current = { lat, lon };
+    const loadedCell = cellId && forecast?.features.find(feature => feature.properties.cell_id === cellId);
+    if (loadedCell) {
+      setCell(loadedCell);
+      setLocation({ cell: loadedCell, history: [], rainfall: loadedCell.properties.rainfall_series || [] });
+      setMobileDetails(true);
+      setLocationLoading(false);
+      setLocationError(null);
+      return;
+    }
     setLocationLoading(true); setLocationError(null); setLocation(null);
     try {
-      const result = await api<LocationResult>(`/location?${query({ lat, lon, run_id: displayedRunId || undefined })}`, abort.signal);
+      const result = await api<LocationResult>(`/location?${query({ lat, lon, run_id: displayedRunId || undefined, include_history: 'false' })}`, abort.signal);
       if (!abort.signal.aborted) {
         setLocation(result); setCell(result.cell); setMobileDetails(Boolean(result.cell));
         if (!result.cell) setLocationError('This point is outside the mapped grid. Select a colored cell to explore its data.');
@@ -228,7 +237,7 @@ export default function App() {
     } catch (error) {
       if (!abort.signal.aborted) { setCell(null); setLocationError(error instanceof Error ? error.message : 'Location data is unavailable.'); }
     } finally { if (!abort.signal.aborted) setLocationLoading(false); }
-  }, [displayedRunId]);
+  }, [displayedRunId, forecast]);
 
   useEffect(() => {
     if (!runId) { setForecast(null); setCell(null); setLocation(null); return; }
@@ -289,7 +298,7 @@ export default function App() {
     return () => abort.abort();
   }, [showEvents, eventStart, eventEnd, refreshToken, eventRetry]);
   const chooseRun = (id: string) => { setAutoLatest(false); setRunId(id); };
-  const pickAndFocus = (lat: number, lon: number) => { setFocus({ lat, lon, nonce: Date.now() }); void pickLocation(lat, lon); };
+  const pickAndFocus = (lat: number, lon: number, cellId?: string) => { setFocus({ lat, lon, nonce: Date.now() }); void pickLocation(lat, lon, cellId); };
   const closeDrawer = useCallback(() => setDrawer(null), []);
   const closeLocation = () => { locationRequest.current?.abort(); selectedPosition.current = null; setCell(null); setLocation(null); setLocationLoading(false); setMobileDetails(false); };
 
