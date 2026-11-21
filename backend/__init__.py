@@ -1,0 +1,1 @@
+"""Nepal Landslide Watch."""

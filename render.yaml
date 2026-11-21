@@ -1,0 +1,19 @@
+# Paid service and persistent disk; review the account's price before creating.
+# Keep the worker off until the disk has been seeded with the runtime archive.
+services:
+  - type: web
+    name: nepal-landslide-watch
+    runtime: docker
+    plan: 1c-2g
+    healthCheckPath: /healthz
+    envVars:
+      - key: NEPAL_DATA_DIR
+        value: /app/data
+      - key: NEPAL_WORKER_ENABLED
+        value: "0"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    disk:
+      name: nepal-research-data
+      mountPath: /app/data
+      sizeGB: 5

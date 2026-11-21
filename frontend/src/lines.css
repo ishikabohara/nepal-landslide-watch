@@ -1,0 +1,16 @@
+/* Dark structural dividers, with quieter borders inside cards and controls. */
+.app-shell {
+  --border: #202020;
+}
+
+.app-shell :is(.sidebar, .main-header, .workspace-toolbar, .detail-wrap, .timeline, .status-footer),
+.app-shell .sidebar :is(.sidebar-area, .sidebar-footer, .project-author),
+.app-shell .detail-panel .detail-section,
+.app-shell .drawer :is(.drawer-header, .drawer-section, .drawer-footer),
+.app-shell .timeline .timeline-actions {
+  border-color: #202020 !important;
+}
+
+.app-shell .workspace-toolbar .toolbar-divider {
+  background: #202020;
+}

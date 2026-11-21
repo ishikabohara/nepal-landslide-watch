@@ -1,0 +1,29 @@
+.venv/
+# The public website repository contains source and deployment instructions.
+# Research workspaces, downloaded inputs, and generated runtime archives stay local.
+data/
+artifacts/
+iclr/
+workshop/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+frontend/node_modules/
+frontend/dist/
+.env
+data/raw/
+data/cache/
+data/published/
+data/model/*.joblib
+data/model/*.ubj
+data/processed/*.npz
+data/processed/*.parquet
+*.log
+artifacts/screenshots/
+artifacts/runtime/
+frontend/tsconfig.tsbuildinfo
+data/processed/events.json
+data/processed/places.json
+data/worker_health.json
+data/*.lock
