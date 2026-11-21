@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import logging
 import time
 from datetime import datetime, timedelta, timezone
@@ -16,6 +17,9 @@ LOG = logging.getLogger("scheduled_snapshot")
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--refresh-only", action="store_true", help="Refresh source data without waiting for the nightly issue window")
+    args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     target = datetime.now(timezone.utc).astimezone(NEPAL).date() + timedelta(days=1)
     deadline = issue_time(target)
@@ -23,6 +27,8 @@ def main() -> None:
     LOG.info("Input refresh: %s", first.get("status"))
     if first.get("rainfall", {}).get("status") != "available":
         LOG.warning("Rainfall refresh unavailable; a complete cached window may still permit publication")
+    if args.refresh_only:
+        return
     # The model's operational mode permits only the final 20 minutes before
     # Nepal midnight. A delayed runner never backdates a missed issuance.
     window = deadline - timedelta(minutes=10)

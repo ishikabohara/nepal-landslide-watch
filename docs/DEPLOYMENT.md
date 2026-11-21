@@ -55,7 +55,7 @@ The GitHub Actions workflow `.github/workflows/publish-runtime.yml` runs daily a
 
 1. Create the initial `runtime` GitHub Release with the locally checked `nepal-runtime.tar.gz` and `.sha256` assets. Preserve the tag; scheduled jobs replace only its assets.
 2. Connect the public GitHub repository to Render and create a Blueprint from `render.yaml`. Verify **Free** is selected and **no disk or payment method** is requested.
-3. Open the assigned HTTPS URL; check `/api/status`, the grid, search and location details. Run the GitHub workflow manually if the nightly schedule has not run yet.
+3. Open the assigned HTTPS URL; check `/api/status`, the grid, search and location details. A manual GitHub workflow run can refresh the input archive immediately. Its default `refresh_only` option does not issue a prospective map outside the nightly window.
 4. Monitor GitHub Actions and the `/api/status` manifest. GitHub schedules may be delayed or skipped; the worker never backdates a missed issuance. Public repositories may have scheduled workflows disabled after prolonged inactivity.
 
 Render Free spins down after 15 minutes without traffic and can take about a minute to wake. Its filesystem is ephemeral, so each cold start re-downloads the public archive. The initial September 2026 simulation remains visibly historical until a fresh prospective run succeeds. This is a student research demonstration, not a guaranteed continuous or emergency service. See the provider's [free service limitations](https://render.com/docs/free) and [Blueprint reference](https://render.com/docs/blueprint-spec).

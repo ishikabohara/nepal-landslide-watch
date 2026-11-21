@@ -5,6 +5,11 @@ on:
     # 23:18 Nepal time. The runner refreshes inputs before the 23:50 issue window.
     - cron: '33 17 * * *'
   workflow_dispatch:
+    inputs:
+      refresh_only:
+        description: Refresh source data now without waiting for the nightly issue window
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -35,7 +40,7 @@ jobs:
           sha256sum --check nepal-runtime.tar.gz.sha256
           tar -xzf nepal-runtime.tar.gz -C ../..
       - name: Refresh rainfall and issue if complete
-        run: python -m scripts.publish_scheduled_snapshot
+        run: python -m scripts.publish_scheduled_snapshot ${{ inputs.refresh_only && '--refresh-only' || '' }}
       - name: Package redacted public runtime
         run: python scripts/package_runtime.py
       - name: Replace release assets
